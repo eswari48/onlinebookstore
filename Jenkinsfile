@@ -1,17 +1,24 @@
 pipeline {
     agent any
 
-    // Set up tools installed in Jenkins
     tools {
-        maven 'Maven3'   // Replace with your Maven installation name
-        jdk 'Java11'     // Replace with your JDK installation name
+        maven 'Maven3'   // Make sure this matches your Jenkins Maven installation
+        jdk 'Java11'     // Optional: set this to your configured JDK name
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 echo "Cloning repository..."
-                git branch: 'master', url: 'https://github.com/eswari48/Hotel-Management-Project-Java.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/eswari48/onlinebookstore.git',
+                        credentialsId: 'jenki'  // Update if you use a different credential
+                    ]]
+                ])
                 echo "Repository cloned successfully"
             }
         }
@@ -19,41 +26,47 @@ pipeline {
         stage('Validate') {
             steps {
                 echo "Running Maven validate..."
-                sh 'mvn clean validate'
+                dir('onlinebookstore') {
+                    sh 'mvn clean validate'
+                }
             }
         }
 
         stage('Compile') {
             steps {
-                echo "Compiling the project..."
-                sh 'mvn compile'
+                echo "Compiling project..."
+                dir('onlinebookstore') {
+                    sh 'mvn compile'
+                }
             }
         }
 
         stage('Test') {
             steps {
                 echo "Running tests..."
-                sh 'mvn test'
+                dir('onlinebookstore') {
+                    sh 'mvn test'
+                }
             }
         }
 
         stage('Package') {
             steps {
-                echo "Packaging the artifact..."
-                sh 'mvn package'
-
-                // Archive the artifact in Jenkins
-                archiveArtifacts artifacts: 'target/*.war', allowEmptyArchive: true
+                echo "Packaging artifact..."
+                dir('onlinebookstore') {
+                    sh 'mvn package'
+                    archiveArtifacts artifacts: 'target/*.war', allowEmptyArchive: false
+                }
             }
         }
     }
 
     post {
         success {
-            echo "✅ Build and artifact creation successful!"
+            echo "✅ Build succeeded!"
         }
         failure {
-            echo "❌ Build failed. Check console logs."
+            echo "❌ Build failed. Check console output."
         }
     }
 }
